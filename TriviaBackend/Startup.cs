@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TriviaBackend.Hubs;
+using TriviaBackend.Services;
 
 namespace TriviaBackend
 {
@@ -28,7 +29,10 @@ namespace TriviaBackend
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers();
+            services.AddControllers(options =>
+            {
+                options.RespectBrowserAcceptHeader = true;
+            });
 
             services.AddCors(options =>
             {
@@ -40,7 +44,7 @@ namespace TriviaBackend
             });
 
             services.AddSignalR().AddAzureSignalR();
-            services.AddSingleton(new TriviaHub());
+            services.AddSingleton(new TriviaService());
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

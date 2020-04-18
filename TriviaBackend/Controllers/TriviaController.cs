@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using TriviaBackend.Hubs;
+using TriviaBackend.Services;
 
 namespace TriviaBackend.Controllers
 {
@@ -13,19 +14,19 @@ namespace TriviaBackend.Controllers
     public class TriviaController : ControllerBase
     {
         private readonly ILogger<TriviaController> _logger;
-        private TriviaHub _triviaHub;
+        private TriviaService _triviaService;
 
-        public TriviaController(ILogger<TriviaController> logger, TriviaHub triviaHub)
+        public TriviaController(ILogger<TriviaController> logger, TriviaService triviaService)
         {
             _logger = logger;
-            _triviaHub = triviaHub;
+            _triviaService = triviaService;
         }
 
         [HttpPost("start-game")]
-        public bool StartGame()
+        public ActionResult StartGame()
         {
-            _triviaHub.BroadcastMessage("name", "mes");
-            return true;
+            string newGameCode = _triviaService.CreateNewGame();
+            return Ok(newGameCode);
         }
     }
 }
