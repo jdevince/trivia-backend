@@ -39,7 +39,11 @@ namespace TriviaBackend
                 options.AddPolicy(name: MyCorsPolicy,
                                   builder =>
                                   {
-                                      builder.WithOrigins("http://localhost:4200").AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+                                      builder
+                                        .WithOrigins(Configuration.GetValue<string>("AllowedOrigin"))
+                                        .AllowAnyHeader()
+                                        .AllowAnyMethod()
+                                        .AllowCredentials();
                                   });
             });
 

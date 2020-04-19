@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using TriviaBackend.Hubs;
 using TriviaBackend.Services;
+using static TriviaBackend.Models.Enums;
 
 namespace TriviaBackend.Controllers
 {
@@ -23,9 +24,9 @@ namespace TriviaBackend.Controllers
         }
 
         [HttpPost("start-game")]
-        public ActionResult StartGame()
+        public ActionResult StartGame(Difficulty difficulty)
         {
-            string newGameCode = _triviaService.CreateNewGame();
+            string newGameCode = _triviaService.CreateNewGame(difficulty);
             return Ok(newGameCode);
         }
     }

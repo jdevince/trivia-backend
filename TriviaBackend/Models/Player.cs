@@ -11,7 +11,8 @@ namespace TriviaBackend.Models
         public string Username { get; set; }
         public string ConnectionId { get; set; }
         public int Score { get; set; }
-        public bool? CurrentlyCorrect { get; set; }
+        public string LastAnswer { get; set; }
+        public bool LastAnswerCorrect { get; set; }
 
         public Player(string username, string connectionId)
         {

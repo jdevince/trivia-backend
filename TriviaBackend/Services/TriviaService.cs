@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using TriviaBackend.Models;
+using static TriviaBackend.Models.Enums;
 
 namespace TriviaBackend.Services
 {
@@ -23,17 +24,17 @@ namespace TriviaBackend.Services
             AddMultipleChoicesQuestionsOne(); //~500
         }
 
-        public string CreateNewGame()
+        public string CreateNewGame(Difficulty difficulty)
         {
             string newGameCode = GetRandomGameCode();
 
             if (Games.Select(x => x.GameCode).Contains(newGameCode))
             {
-                newGameCode = CreateNewGame();
+                newGameCode = CreateNewGame(difficulty);
             }
             else
             {
-                Games.Add(new Game(newGameCode));
+                Games.Add(new Game(newGameCode, difficulty));
             }
 
             return newGameCode;
@@ -41,8 +42,8 @@ namespace TriviaBackend.Services
 
         private string GetRandomGameCode()
         {
-            string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            int length = 6;
+            string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            int length = 3;
 
             string newGameCode = new string(Enumerable.Repeat(chars, length).Select(s => s[_random.Next(s.Length)]).ToArray());
 
@@ -65,6 +66,11 @@ namespace TriviaBackend.Services
             return null;
         }
 
+        public void DeleteGame(Game game)
+        {
+            Games.Remove(game);
+        }
+
         public Player GetCurrentPlayer(string connectionId)
         {
             foreach (Game game in Games)
@@ -81,10 +87,11 @@ namespace TriviaBackend.Services
             return null;
         }
 
-        public Question GetQuestion()
+        public Question GetQuestion(Difficulty difficulty)
         {
-            int index = _random.Next(_questions.Count);
-            Question question = _questions[index];
+            List<Question> tempQuestions = _questions.Where(x => x.Difficulty == difficulty).ToList();
+            int index = _random.Next(tempQuestions.Count);
+            Question question = tempQuestions[index];
             return question;
         }
 
@@ -102,8 +109,25 @@ namespace TriviaBackend.Services
                     && !jeopardyQuestion.Question.Contains("(")
                     && !jeopardyQuestion.Question.Contains("<"))
                 {
+                    Difficulty difficulty = Difficulty.Medium; //All Jeopardy questions are medium except bottom 2 rows
+
+                    if (jeopardyQuestion.Round == "Jeopardy!")
+                    {
+                         if (jeopardyQuestion.Value == "$800" || jeopardyQuestion.Value == "$1000")
+                        {
+                            difficulty = Difficulty.Hard;
+                        }
+                    }
+                    else if (jeopardyQuestion.Round == "Double Jeopardy!")
+                    {
+                        if (jeopardyQuestion.Value == "$1600" || jeopardyQuestion.Value == "$2000")
+                        {
+                            difficulty = Difficulty.Hard;
+                        }
+                    }
+
                     string question = jeopardyQuestion.Question.Substring(1, jeopardyQuestion.Question.Length - 2); //Strip out starting + ending single quote
-                    _questions.Add(new Question(question, jeopardyQuestion.Answer));
+                    _questions.Add(new Question(question, jeopardyQuestion.Answer, difficulty, jeopardyQuestion.Category));
                 }
             }
         }
@@ -134,13 +158,22 @@ namespace TriviaBackend.Services
                         break;
                 }
 
-                answer = answer[0].ToString().ToUpper() + answer.Substring(1);
-                
-                Question newQuestion = new Question(question.Question, answer, new List<string>() { question.A, question.B, question.C, question.D });
-                
+                answer = Capitalize(answer);
+                question.A = Capitalize(question.A);
+                question.B = Capitalize(question.B);
+                question.C = Capitalize(question.C);
+                question.D = Capitalize(question.D);
+
+                Question newQuestion = new Question(question.Question, answer, Difficulty.Easy, options: new List<string>() { question.A, question.B, question.C, question.D });
                 
                 _questions.Add(newQuestion);
             }
+        }
+
+        private string Capitalize(string input)
+        {
+            string output = input[0].ToString().ToUpper() + input.Substring(1);
+            return output;
         }
     }
 }

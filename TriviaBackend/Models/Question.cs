@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using static TriviaBackend.Models.Enums;
 
 namespace TriviaBackend.Models
 {
@@ -9,13 +10,16 @@ namespace TriviaBackend.Models
     {
         public string QuestionText { get; set; }
         public string Answer { get; set; }
+        public string Category { get; set; }
+        public Difficulty Difficulty { get; set; }
         public List<string> Options { get; set; }
-        
 
-        public Question(string questionText, string answer, List<string> options = null)
+        public Question(string questionText, string answer, Difficulty difficulty, string category = null, List<string> options = null)
         {
             this.QuestionText = questionText;
             this.Answer = answer;
+            this.Difficulty = difficulty;
+            this.Category = category;
             this.Options = options;
         }
 
