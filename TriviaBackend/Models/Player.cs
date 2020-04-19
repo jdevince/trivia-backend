@@ -13,6 +13,8 @@ namespace TriviaBackend.Models
         public int Score { get; set; }
         public string LastAnswer { get; set; }
         public bool LastAnswerCorrect { get; set; }
+        public int VotesAsCorrectNum { get; set; }
+        public int VotesAsCorrectDenom { get; set; }
 
         public Player(string username, string connectionId)
         {

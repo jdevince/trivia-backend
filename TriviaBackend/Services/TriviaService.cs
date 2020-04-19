@@ -87,6 +87,19 @@ namespace TriviaBackend.Services
             return null;
         }
 
+        public Player GetPlayer(Game game, string username)
+        {
+            foreach (Player player in game.Players)
+            {
+                if (player.Username == username)
+                {
+                    return player;
+                }
+            }
+
+            return null;
+        }
+
         public Question GetQuestion(Difficulty difficulty)
         {
             List<Question> tempQuestions = _questions.Where(x => x.Difficulty == difficulty).ToList();
@@ -109,18 +122,18 @@ namespace TriviaBackend.Services
                     && !jeopardyQuestion.Question.Contains("(")
                     && !jeopardyQuestion.Question.Contains("<"))
                 {
-                    Difficulty difficulty = Difficulty.Medium; //All Jeopardy questions are medium except bottom 2 rows
+                    Difficulty difficulty = Difficulty.Medium; //Top 2 rows of Jeopardy questions are medium
 
                     if (jeopardyQuestion.Round == "Jeopardy!")
                     {
-                         if (jeopardyQuestion.Value == "$800" || jeopardyQuestion.Value == "$1000")
+                         if (jeopardyQuestion.Value == "$600" || jeopardyQuestion.Value == "$800" || jeopardyQuestion.Value == "$1000")
                         {
                             difficulty = Difficulty.Hard;
                         }
                     }
                     else if (jeopardyQuestion.Round == "Double Jeopardy!")
                     {
-                        if (jeopardyQuestion.Value == "$1600" || jeopardyQuestion.Value == "$2000")
+                        if (jeopardyQuestion.Value == "$1200" || jeopardyQuestion.Value == "$1600" || jeopardyQuestion.Value == "$2000")
                         {
                             difficulty = Difficulty.Hard;
                         }

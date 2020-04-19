@@ -63,34 +63,51 @@ namespace TriviaBackend.Hubs
         public void StartGame()
         {
             Game game = _triviaService.GetCurrentGame(Context.ConnectionId);
+            ResetGame(game);
+            new Task(() => { PlayGame(game); }).Start();
+        }
+
+        private void ResetGame(Game game)
+        {
+            game.IsStarted = true;
             game.WinnerText = null;
             game.Players.ForEach(player => {
                 player.Score = 0;
             });
-            new Task(() => { PlayGame(game); }).Start();
+            SendDataToPlayers(game, "gameStateChange", game);
+        }
+
+        private void ResetQuestion(Game game)
+        {
+            int votesAsCorrectDenom = 3;
+            if (game.Players.Count < 3)
+            {
+                votesAsCorrectDenom = game.Players.Count;
+            }
+
+            game.Players.ForEach(player => {
+                player.LastAnswer = null;
+                player.LastAnswerCorrect = false;
+                player.VotesAsCorrectNum = 0;
+                player.VotesAsCorrectDenom = votesAsCorrectDenom;
+            });
+
+            game.IsQuestionActive = true;
+
+            SendDataToPlayers(game, "gameStateChange", game);
         }
 
         public void PlayGame(Game game)
         {
-            game.IsStarted = true;
-            SendDataToPlayers(game, "gameStateChange", game);
-
             bool gameOver = false;
             while (!gameOver)
             {
-                //Reset all players responses to blank
-                game.Players.ForEach(player => {
-                    player.LastAnswer = null;
-                    player.LastAnswerCorrect = false;
-                });
+                ResetQuestion(game);
 
                 //Get a new question
                 Question newQuestion = _triviaService.GetQuestion(game.Difficulty);
                 game.CurrentQuestion = newQuestion;
                 SendDataToPlayers(game, "newQuestion", newQuestion);
-
-                game.IsQuestionActive = true;
-                SendDataToPlayers(game, "gameStateChange", game);
 
                 //Every half-second, check if all players have responded. End after 30 seconds.
                 for (int i = 0; i < 60; i++)
@@ -182,7 +199,26 @@ namespace TriviaBackend.Hubs
         private void SendDataToPlayers(Game game, string method, object data = null)
         {
             List<string> connectionIds = game.Players.Select(x => x.ConnectionId).ToList();
-            _hubContext.Clients.Clients(connectionIds).SendAsync(method, data);
+
+            if (connectionIds.Count > 0)
+            {
+                _hubContext.Clients.Clients(connectionIds).SendAsync(method, data);
+            }
+        }
+
+        public void VoteAsCorrect(string username)
+        {
+            Game game = _triviaService.GetCurrentGame(Context.ConnectionId);
+            Player player = _triviaService.GetPlayer(game, username);
+            player.VotesAsCorrectNum++;
+
+            if (player.VotesAsCorrectNum >= player.VotesAsCorrectDenom)
+            {
+                player.Score += 10;
+                player.LastAnswerCorrect = true;
+            }
+
+            SendDataToPlayers(game, "gameStateChange", game);
         }
     }
 }
