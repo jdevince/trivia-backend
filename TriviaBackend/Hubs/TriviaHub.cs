@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -44,7 +45,7 @@ namespace TriviaBackend.Hubs
             _hubContext.Clients.Client(Context.ConnectionId).SendAsync("gameStateChange", game);
         }
 
-        public void LeaveGame()
+        public override Task OnDisconnectedAsync(Exception exception)
         {
             Game game = _triviaService.GetCurrentGame(Context.ConnectionId);
             Player player = _triviaService.GetCurrentPlayer(Context.ConnectionId);
@@ -58,6 +59,7 @@ namespace TriviaBackend.Hubs
             {
                 SendDataToPlayers(game, "gameStateChange", game);
             }
+            return base.OnDisconnectedAsync(exception);
         }
 
         public void StartGame()
