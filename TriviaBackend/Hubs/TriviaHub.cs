@@ -20,22 +20,25 @@ namespace TriviaBackend.Hubs
             _hubContext = hubContext;
         }
 
-        public bool JoinGame(string username, string gameCode)
+        public string JoinGame(string username, string gameCode)
         {
-            Player player = new Player(username, Context.ConnectionId);
-
             gameCode = gameCode.ToUpper();
             Game game = _triviaService.Games.FirstOrDefault(x => x.GameCode == gameCode);
 
-            if (game != null)
+            if (game == null)
             {
-                game.Players.Add(player);
-                SendDataToPlayers(game, "gameStateChange", game);
-                return true;
+                return "That game code does not exist";
+            }
+            else if (game.Players.Any(x => x.Username.ToUpper() == username.ToUpper()))
+            {
+                return "That username is already taken for this game";
             }
             else
             {
-                return false;
+                Player player = new Player(username, Context.ConnectionId);
+                game.Players.Add(player);
+                SendDataToPlayers(game, "gameStateChange", game);
+                return "Success";
             }
         }
 
@@ -48,17 +51,24 @@ namespace TriviaBackend.Hubs
         public override Task OnDisconnectedAsync(Exception exception)
         {
             Game game = _triviaService.GetCurrentGame(Context.ConnectionId);
-            Player player = _triviaService.GetCurrentPlayer(Context.ConnectionId);
-            game.Players.Remove(player);
 
-            if (game.Players.Count == 0)
+            if (game != null)
             {
-                _triviaService.DeleteGame(game);
+                Player player = _triviaService.GetCurrentPlayer(Context.ConnectionId);
+                game.Players.Remove(player);
+
+                if (game.Players.Count == 0)
+                {
+                    _triviaService.DeleteGame(game);
+                }
+                else
+                {
+                    SendDataToPlayers(game, "gameStateChange", game);
+                }
             }
-            else
-            {
-                SendDataToPlayers(game, "gameStateChange", game);
-            }
+
+            _triviaService.CheckForStaleGames(); //Unrelated to this game, but safety check to avoid memory leak
+
             return base.OnDisconnectedAsync(exception);
         }
 
@@ -99,7 +109,7 @@ namespace TriviaBackend.Hubs
             SendDataToPlayers(game, "gameStateChange", game);
         }
 
-        public void PlayGame(Game game)
+        public async void PlayGame(Game game)
         {
             bool gameOver = false;
             while (!gameOver)
@@ -107,7 +117,7 @@ namespace TriviaBackend.Hubs
                 ResetQuestion(game);
 
                 //Get a new question
-                Question newQuestion = _triviaService.GetQuestion(game.Difficulty);
+                Question newQuestion = await _triviaService.GetQuestion(game.Difficulty);
                 game.CurrentQuestion = newQuestion;
                 SendDataToPlayers(game, "newQuestion", newQuestion);
 

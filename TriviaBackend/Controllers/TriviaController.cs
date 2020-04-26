@@ -29,5 +29,11 @@ namespace TriviaBackend.Controllers
             string newGameCode = _triviaService.CreateNewGame(difficulty);
             return Ok(newGameCode);
         }
+
+        [HttpPost("keep-alive")]
+        public ActionResult KeepAlive()
+        {
+            return Ok();
+        }
     }
 }

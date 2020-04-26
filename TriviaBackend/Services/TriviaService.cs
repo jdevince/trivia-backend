@@ -3,8 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Web;
 using TriviaBackend.Models;
 using static TriviaBackend.Models.Enums;
 
@@ -17,6 +19,7 @@ namespace TriviaBackend.Services
 
         private List<Question> _questions = new List<Question>();
         private Random _random = new Random();
+        static readonly HttpClient _httpClient = new HttpClient();
 
         public TriviaService()
         {
@@ -71,6 +74,24 @@ namespace TriviaBackend.Services
             Games.Remove(game);
         }
 
+        public void CheckForStaleGames()
+        {
+            int gameCount = Games.Count;
+            for (int i = 0; i < gameCount; i++)
+            {
+                if (i < Games.Count)
+                {
+                    Game game = Games[i];
+                    if (game.Players == null || game.Players.Count == 0)
+                    {
+                        DeleteGame(game);
+                        i--;
+                        gameCount--;
+                    }
+                }
+            }
+        }
+
         public Player GetCurrentPlayer(string connectionId)
         {
             foreach (Game game in Games)
@@ -100,11 +121,56 @@ namespace TriviaBackend.Services
             return null;
         }
 
-        public Question GetQuestion(Difficulty difficulty)
+        public async Task<Question> GetQuestion(Difficulty difficulty)
         {
-            List<Question> tempQuestions = _questions.Where(x => x.Difficulty == difficulty).ToList();
-            int index = _random.Next(tempQuestions.Count);
-            Question question = tempQuestions[index];
+            Question question = null;
+            if (difficulty == Difficulty.Easy && _random.Next(4000) > 500) //~500 easy from json and 3500 from Open Trivia DB
+            {
+                question = await GetQuestionFromOpenTriviaDB();
+            }
+
+            if (question == null)
+            {
+                List<Question> tempQuestions = _questions.Where(x => x.Difficulty == difficulty).ToList();
+                int index = _random.Next(tempQuestions.Count);
+                question = tempQuestions[index];
+            }
+            
+            return question;
+        }
+
+        private async Task<Question> GetQuestionFromOpenTriviaDB()
+        {
+            Question question = null;
+            
+            //Try to get from Open Trivia DB via API
+            try
+            {
+                HttpResponseMessage response = await _httpClient.GetAsync("https://opentdb.com/api.php?amount=1");
+                if (response.IsSuccessStatusCode)
+                {
+                    string jsonString = await response.Content.ReadAsStringAsync();
+                    var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+                    OpenTriviaDBAPIResponse responseObj = JsonSerializer.Deserialize<OpenTriviaDBAPIResponse>(jsonString, jsonOptions);
+                    OpenTriviaDBQuestion openTriviaDBQuestion = responseObj.Results.First();
+
+                    List<string> options = openTriviaDBQuestion.IncorrectAnswers.Append(openTriviaDBQuestion.CorrectAnswer).ToList();
+                    options.ForEach(x => x = HttpUtility.HtmlDecode(x));
+                    options.Sort();
+                    
+                    question = new Question(
+                                    HttpUtility.HtmlDecode(openTriviaDBQuestion.Question),
+                                    HttpUtility.HtmlDecode(openTriviaDBQuestion.CorrectAnswer), 
+                                    Difficulty.Easy,
+                                    HttpUtility.HtmlDecode(openTriviaDBQuestion.Category), 
+                                    options);
+                }
+            }
+            catch (Exception e)
+            {
+                question = null; //Use failsafe from non-API questions
+            }
+
             return question;
         }
 
