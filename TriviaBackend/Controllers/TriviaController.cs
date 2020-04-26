@@ -30,7 +30,7 @@ namespace TriviaBackend.Controllers
             return Ok(newGameCode);
         }
 
-        [HttpPost("keep-alive")]
+        [HttpGet("keep-alive")]
         public ActionResult KeepAlive()
         {
             return Ok();
